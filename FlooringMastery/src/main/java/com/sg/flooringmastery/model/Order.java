@@ -18,6 +18,8 @@ public class Order {
     private BigDecimal total;
 
     // Constructor
+    public Order() {}
+
     public Order(int orderNumber, String customerName, String state, BigDecimal taxRate, String productType,
                  BigDecimal area, BigDecimal costPerSquareFoot, BigDecimal laborCostPerSquareFoot,
                  BigDecimal materialCost, BigDecimal laborCost, BigDecimal tax, BigDecimal total) {
