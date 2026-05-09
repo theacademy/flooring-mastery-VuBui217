@@ -1,6 +1,7 @@
 package com.sg.flooringmastery.dao;
 
 import com.sg.flooringmastery.model.Order;
+import com.sg.flooringmastery.service.FlooringMasteryDataValidationException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -16,4 +17,6 @@ public interface OrderDao {
     Order removeOrder(LocalDate date, int orderNumber) throws FlooringMasteryPersistenceException;
 
     void exportAllData() throws FlooringMasteryPersistenceException;
+
+    int getMaxOrderNumber() throws FlooringMasteryDataValidationException, FlooringMasteryPersistenceException;
 }

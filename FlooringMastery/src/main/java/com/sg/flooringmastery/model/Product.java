@@ -8,6 +8,7 @@ public class Product {
     private BigDecimal laborCostPerSquareFoot;
 
     // Constructor
+    public Product() {};
     public Product(String productType, BigDecimal costPerSquareFoot, BigDecimal laborCostPerSquareFoot) {
         this.productType = productType;
         this.costPerSquareFoot = costPerSquareFoot;

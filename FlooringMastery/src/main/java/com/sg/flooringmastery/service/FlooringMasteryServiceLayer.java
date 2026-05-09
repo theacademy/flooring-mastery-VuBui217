@@ -12,7 +12,9 @@ public interface FlooringMasteryServiceLayer {
 
     List<Order> getOrdersByDate(LocalDate date) throws FlooringMasteryPersistenceException;
 
-    Order addOrder(LocalDate date, Order order) throws FlooringMasteryPersistenceException,
+    Order calculateOrder(LocalDate date, Order order) throws FlooringMasteryDataValidationException, FlooringMasteryPersistenceException;
+
+    void addOrder(LocalDate date, Order order) throws FlooringMasteryPersistenceException,
             FlooringMasteryDataValidationException;
 
     Order editOrder(LocalDate date, Order order) throws FlooringMasteryPersistenceException;
@@ -23,5 +25,7 @@ public interface FlooringMasteryServiceLayer {
 
     List<Product> getAllProducts() throws FlooringMasteryPersistenceException;
 
-    Tax getTaxByState(String stateAbbreviation) throws FlooringMasteryPersistenceException;
+    List<Tax> getAllTaxes() throws FlooringMasteryPersistenceException;
+
+    Tax getTaxByState(String stateAbbreviation) throws FlooringMasteryPersistenceException, FlooringMasteryDataValidationException;
 }

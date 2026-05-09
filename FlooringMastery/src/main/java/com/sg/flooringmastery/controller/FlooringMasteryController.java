@@ -2,6 +2,9 @@ package com.sg.flooringmastery.controller;
 
 import com.sg.flooringmastery.dao.FlooringMasteryPersistenceException;
 import com.sg.flooringmastery.model.Order;
+import com.sg.flooringmastery.model.Product;
+import com.sg.flooringmastery.model.Tax;
+import com.sg.flooringmastery.service.FlooringMasteryDataValidationException;
 import com.sg.flooringmastery.service.FlooringMasteryServiceLayer;
 import com.sg.flooringmastery.ui.FlooringMasterView;
 
@@ -29,7 +32,7 @@ public class FlooringMasteryController {
                     displayOrders();
                     break;
                 case 2:
-                    System.out.println("Add an Order");
+                    addOrder();
                     break;
                 case 3:
                     System.out.println("Edit an Order");
@@ -63,6 +66,45 @@ public class FlooringMasteryController {
             view.displayErrorMessage(e.getMessage());
         }
 
+    }
+
+    private void addOrder() {
+        LocalDate date = view.getFutureDate();
+
+        try {
+            // Get customer name
+            String customerName = view.getCustomerName();
+
+            // Get state and validate
+            String state = view.getState();
+
+            try {
+                service.getTaxByState(state);
+            } catch (FlooringMasteryDataValidationException | FlooringMasteryPersistenceException e) {
+                view.displayErrorMessage(e.getMessage());
+                return;
+            }
+
+            // State is valid, now get product and area
+            List<Product> products = service.getAllProducts();
+            Order order = view.getNewOrderInfo(customerName, state, products);
+
+            // Calculate remaining fields
+            Order calculatedOrder = service.calculateOrder(date, order);
+
+            // Show order summary and ask for confirmation
+            view.displayOrderSummary(calculatedOrder, date);
+            if (view.getPlaceOrderConfirmation()) {
+                // Yes -> save order to memory
+                service.addOrder(date, calculatedOrder);
+                view.displaySuccessMessage("Order successfully placed!");
+            } else {
+                // No -> Display message
+                view.displayErrorMessage("Order cancelled. Return to main menu.");
+            }
+        } catch (FlooringMasteryPersistenceException | FlooringMasteryDataValidationException e) {
+            view.displayErrorMessage(e.getMessage());
+        }
     }
     private int getMenuSelection() { return view.printMenuAndGetSelection(); }
 

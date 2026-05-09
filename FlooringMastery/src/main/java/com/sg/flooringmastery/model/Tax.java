@@ -8,6 +8,7 @@ public class Tax {
     private BigDecimal taxRate;
 
     // Constructor
+    public Tax() {}
     public Tax(String stateAbbreviation, String stateName, BigDecimal taxRate) {
         this.stateAbbreviation = stateAbbreviation;
         this.stateName = stateName;

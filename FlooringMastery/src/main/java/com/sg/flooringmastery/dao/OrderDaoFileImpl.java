@@ -1,6 +1,7 @@
 package com.sg.flooringmastery.dao;
 
 import com.sg.flooringmastery.model.Order;
+import com.sg.flooringmastery.service.FlooringMasteryDataValidationException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,7 +29,12 @@ public class OrderDaoFileImpl implements OrderDao {
 
     @Override
     public Order addOrder(LocalDate date, Order order) throws FlooringMasteryPersistenceException {
-        return null;
+        if (!orders.containsKey(date)) {
+            loadOrdersForDate(date);
+        }
+        // Add order to memory
+        orders.get(date).add(order);
+        return order;
     }
 
     @Override
@@ -46,8 +52,51 @@ public class OrderDaoFileImpl implements OrderDao {
 
     }
 
+    @Override
+    public int getMaxOrderNumber() throws FlooringMasteryDataValidationException, FlooringMasteryPersistenceException {
+        int maxOrderNumber = 0;
+
+        // First check all already loaded in memory
+        for (List<Order> orderList : orders.values()) {
+            for (Order order : orderList) {
+                if (order.getOrderNumber() > maxOrderNumber) {
+                    maxOrderNumber = order.getOrderNumber();
+                }
+            }
+        }
+
+        // Then scan any files not yet loaded into memory
+        File ordersDir = new File(ORDERS_DIR);
+        File[] orderFiles = ordersDir.listFiles();
+
+        if (orderFiles != null) {
+            for (File file : orderFiles) {
+                String fileName = file.getName();
+                // extract date from fileName
+                String dateAsText = fileName.replace("Orders_", "").replace(".txt", "");
+                // Parse dateAsText to LocalDate
+                LocalDate date = LocalDate.parse(dateAsText, FILE_DATE_FORMATTER);
+
+                // Only add new date to memory
+                if (!orders.containsKey(date)) {
+                    List<Order> loaded = getOrdersByDate(date);
+                    for (Order o : loaded) {
+                        if (o.getOrderNumber() > maxOrderNumber) {
+                            maxOrderNumber = o.getOrderNumber();
+                        }
+                    }
+                }
+            }
+        }
+        return maxOrderNumber;
+    }
+
     // Helper methods
     private Order unmarshallOrder(String orderAsText) {
+        // Format: OrderNumber,CustomerName,State,TaxRate,ProductType,Area,
+        // CostPerSquareFoot,LaborCostPerSquareFoot,MaterialCost,LaborCost,Tax,Total
+        // Example: 1,Ada Lovelace,CA,25.00,Tile,249.00,3.50,4.15,871.50,1033.35,476.21,2381.06
+
         String[] orderTokens = orderAsText.split(DELIMITER);
         int len = orderTokens.length;
 
@@ -118,7 +167,9 @@ public class OrderDaoFileImpl implements OrderDao {
         }
 
         List<Order> loaded = new ArrayList<>();
-        String currentLine = sc.nextLine(); // skip the header
+        // Skip the header
+        sc.nextLine();
+        String currentLine;
         Order currentOrder;
         while (sc.hasNextLine()) {
             currentLine = sc.nextLine();
