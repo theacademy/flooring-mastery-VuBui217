@@ -2,10 +2,8 @@ package com.sg.flooringmastery.ui;
 
 import com.sg.flooringmastery.model.Order;
 import com.sg.flooringmastery.model.Product;
-import com.sg.flooringmastery.model.Tax;
 
 import java.math.BigDecimal;
-import java.sql.Date;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -14,17 +12,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class FlooringMasterView {
+public class FlooringMasteryView {
     private UserIO io;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("MM-dd-yyyy");
-    private static final Set<String> VALID_STATES = new HashSet<>(Arrays.asList(
-            "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-            "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-            "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-            "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-            "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"));
 
-    public FlooringMasterView(UserIO io) { this.io = io; }
+    public FlooringMasteryView(UserIO io) { this.io = io; }
 
     // Menu
     public int printMenuAndGetSelection() {
@@ -66,6 +58,18 @@ public class FlooringMasterView {
         }
     }
 
+    // Get order number
+    public int getOrderNumber() {
+        int orderNumber;
+        while (true) {
+            orderNumber = io.readInt("Please enter an order number: ");
+            if (orderNumber >= 0) {
+                return orderNumber;
+            }
+            io.print("Invalid order number. Order number must be at least 0.");
+        }
+    }
+
     // Display orders for date
     public void displayOrders(List<Order> orders, LocalDate date) {
         io.print("\n=== Orders for " + date.format(FORMATTER) + " ===");
@@ -90,6 +94,15 @@ public class FlooringMasterView {
     }
 
     // Add Order
+    public Order getNewOrderInfo(String customerName, String state, List<Product> products) {
+        Order order = new Order();
+        order.setCustomerName(customerName);
+        order.setState(state);
+        order.setProductType(getProductType(products));
+        order.setArea(getArea());
+        return order;
+    }
+
     public String getCustomerName() {
         while (true) {
             String name = io.readString("Enter customer name: ");
@@ -105,13 +118,13 @@ public class FlooringMasterView {
         return (name != null) && (!name.isBlank()) && (name.matches("[a-zA-Z0-9., ]+"));
     }
 
-    public String getState() {
+    public String getState(Set<String> validStates) {
         while (true) {
             String state = io.readString("Enter state abbreviation (e.g. NJ, VA, TX): ").trim().toUpperCase();
-            if (VALID_STATES.contains(state)) {
+            if (validStates.contains(state)) {
                 return state;
             }
-            io.print("Invalid state abbreviation. Please enter a valid US state (e.g. CA, TX, NY).");
+            io.print("Invalid state. Valid options: " + validStates);
         }
 
     }
@@ -140,14 +153,72 @@ public class FlooringMasterView {
     private BigDecimal getArea() {
         return io.readBigDecimal("Enter area (minimum 100 sq ft):", new BigDecimal("100.00"));
     }
-    public Order getNewOrderInfo(String customerName, String state, List<Product> products) {
-        Order order = new Order();
-        order.setCustomerName(customerName);
-        order.setState(state);
-        order.setProductType(getProductType(products));
-        order.setArea(getArea());
-        return order;
+
+    // Edit order
+    public Order getEditOrderInfo(Order currentOrder, Set<String> validStates, List<Product> products) {
+        // edited order start everything with the original
+        Order edited = new Order(
+                currentOrder.getOrderNumber(), currentOrder.getCustomerName(),
+                currentOrder.getState(), currentOrder.getTaxRate(),
+                currentOrder.getProductType(), currentOrder.getArea(),
+                currentOrder.getCostPerSquareFoot(), currentOrder.getLaborCostPerSquareFoot(),
+                currentOrder.getMaterialCost(), currentOrder.getLaborCost(),
+                currentOrder.getTax(), currentOrder.getTotal());
+
+        // Get edited data for customerName, state, productType, area
+        edited.setCustomerName(getEditCustomerName(currentOrder.getCustomerName()));
+        edited.setState(getEditStateName(currentOrder.getState(), validStates));
+        edited.setProductType(getEditProductType(currentOrder.getProductType(), products));
+        edited.setArea(getEditArea(currentOrder.getArea()));
+
+        return edited;
     }
+
+    private String getEditCustomerName(String currentCustomerName) {
+        while (true) {
+            String input = io.readString("Enter customer name (" + currentCustomerName + "): ");
+            if (input.isBlank()) return currentCustomerName;
+            if (isValidCustomerName(input)) return input;
+            io.print("Invalid name. Name may not be blank and is limited to characters [a-z][0-9] " +
+                    "as well as periods and comma characters.");
+        }
+    }
+
+    private String getEditStateName(String currentStateName, Set<String> validStates) {
+        while (true) {
+            String input = io.readString("Enter state (" + currentStateName + "): ").trim().toUpperCase();
+            if (input.isBlank()) return currentStateName;
+            if (validStates.contains(input)) return input;
+            io.print("Invalid state. Valid options: " + validStates);
+        }
+    }
+
+    private String getEditProductType(String currentProductType, List<Product> products) {
+        displayProductList(products);
+        while (true) {
+            String input = io.readString("Enter product type (" + currentProductType + "): ").trim();
+            if (input.isBlank()) return currentProductType;
+            for (Product p : products) {
+                if (p.getProductType().equalsIgnoreCase(input)) return p.getProductType();
+            }
+            io.print("Invalid product type. Please choose from the list above.");
+        }
+    }
+
+    private BigDecimal getEditArea(BigDecimal currentArea) {
+        while (true) {
+            String input = io.readString("Enter area (" + currentArea + " sq ft): ").trim();
+            if (input.isBlank()) return currentArea;
+            try {
+                BigDecimal area = new BigDecimal(input);
+                if (area.compareTo(new BigDecimal("100.00")) >= 0) return area;
+                io.print("Minimum order area is 100 sq ft.");
+            } catch (NumberFormatException e) {
+                io.print("Invalid number. Please enter a positive decimal.");
+            }
+        }
+    }
+
 
     // Display order summary
     public void displayOrderSummary(Order order, LocalDate date) {

@@ -11,6 +11,7 @@ import com.sg.flooringmastery.model.Tax;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class FlooringMasteryServiceLayerImpl implements FlooringMasteryServiceLayer {
@@ -40,7 +41,7 @@ public class FlooringMasteryServiceLayerImpl implements FlooringMasteryServiceLa
         Tax tax = getTaxByState(order.getState());
         Product product = productDao.getProductByType(order.getProductType());
 
-        // Ser pricing fields for calculations
+        // Set entered fields for calculations
         order.setTaxRate(tax.getTaxRate());
         order.setCostPerSquareFoot(product.getCostPerSquareFoot());
         order.setLaborCostPerSquareFoot(product.getLaborCostPerSquareFoot());
@@ -89,18 +90,50 @@ public class FlooringMasteryServiceLayerImpl implements FlooringMasteryServiceLa
     }
 
     @Override
+    public Order reCalculateOrder(LocalDate date, Order order) throws FlooringMasteryDataValidationException, FlooringMasteryPersistenceException {
+        // Validate user entered fields
+        validateOrder(order);
+
+        // Get tax and product form files
+        Tax tax = getTaxByState(order.getState());
+        Product product = productDao.getProductByType(order.getProductType());
+
+        // Set entered fields for calculations
+        order.setTaxRate(tax.getTaxRate());
+        order.setCostPerSquareFoot(product.getCostPerSquareFoot());
+        order.setLaborCostPerSquareFoot(product.getLaborCostPerSquareFoot());
+
+        // Calculate other fields
+        calculateOrderCosts(order);
+
+        return order;
+    }
+
+    @Override
+    public Order getOrder(LocalDate date, int orderNumber) throws FlooringMasteryDataValidationException, FlooringMasteryPersistenceException {
+        Order order = orderDao.getOrder(date, orderNumber);
+
+        if (order == null) {
+            throw new FlooringMasteryDataValidationException("Order #" + orderNumber + " not found for "
+                    + date.format(DateTimeFormatter.ofPattern("MM-dd-yyyy")));
+        }
+
+        return order;
+    }
+
+    @Override
     public Order editOrder(LocalDate date, Order order) throws FlooringMasteryPersistenceException {
-        return null;
+        return orderDao.editOrder(date, order);
     }
 
     @Override
     public Order removeOrder(LocalDate date, int orderNumber) throws FlooringMasteryPersistenceException {
-        return null;
+        return orderDao.removeOrder(date, orderNumber);
     }
 
     @Override
     public void exportAllData() throws FlooringMasteryPersistenceException {
-
+        orderDao.exportAllData();
     }
 
     @Override

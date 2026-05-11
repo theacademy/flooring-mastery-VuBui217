@@ -11,9 +11,18 @@ import java.util.*;
 
 public class TaxDaoFileImpl implements TaxDao {
 
-    private static final String TAXES_FILE = "Data/Taxes.txt";
+    private final String TAXES_FILE;
     private static final String DELIMITER = ",";
     private Map<String, Tax> taxes = new HashMap<>();
+
+    public TaxDaoFileImpl() {
+        TAXES_FILE = "Data/Taxes.txt";
+    }
+
+    public TaxDaoFileImpl(String taxesTextFile) {
+        TAXES_FILE = taxesTextFile;
+    }
+
     @Override
     public List<Tax> getAllTaxes() throws FlooringMasteryPersistenceException {
         loadTaxes();

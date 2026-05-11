@@ -6,16 +6,18 @@ import com.sg.flooringmastery.model.Product;
 import com.sg.flooringmastery.model.Tax;
 import com.sg.flooringmastery.service.FlooringMasteryDataValidationException;
 import com.sg.flooringmastery.service.FlooringMasteryServiceLayer;
-import com.sg.flooringmastery.ui.FlooringMasterView;
+import com.sg.flooringmastery.ui.FlooringMasteryView;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class FlooringMasteryController {
-    private FlooringMasterView view;
+    private FlooringMasteryView view;
     private FlooringMasteryServiceLayer service;
 
-    public FlooringMasteryController(FlooringMasterView view, FlooringMasteryServiceLayer service) {
+    public FlooringMasteryController(FlooringMasteryView view, FlooringMasteryServiceLayer service) {
         this.view = view;
         this.service = service;
     }
@@ -35,13 +37,13 @@ public class FlooringMasteryController {
                     addOrder();
                     break;
                 case 3:
-                    System.out.println("Edit an Order");
+                    editOrder();
                     break;
                 case 4:
-                    System.out.println("Remove an Order");
+                    removeOrder();
                     break;
                 case 5:
-                    System.out.println("Export All Data");
+                    exportAllData();
                     break;
                 case 6:
                     keepGoing = false;
@@ -53,6 +55,7 @@ public class FlooringMasteryController {
         exitMessage();
     }
 
+    // Display Orders
     private void displayOrders() {
         LocalDate date = view.getDate("Enter the order date: ");
         try {
@@ -68,6 +71,7 @@ public class FlooringMasteryController {
 
     }
 
+    // Add Order
     private void addOrder() {
         LocalDate date = view.getFutureDate();
 
@@ -75,17 +79,16 @@ public class FlooringMasteryController {
             // Get customer name
             String customerName = view.getCustomerName();
 
+            // Stream valid state from Taxes.txt
+            Set<String> validStates = service.getAllTaxes().stream()
+                    .map(tax -> tax.getStateAbbreviation())
+                    .map(s -> s.toUpperCase())
+                    .collect(Collectors.toSet());
+
             // Get state and validate
-            String state = view.getState();
+            String state = view.getState(validStates);
 
-            try {
-                service.getTaxByState(state);
-            } catch (FlooringMasteryDataValidationException | FlooringMasteryPersistenceException e) {
-                view.displayErrorMessage(e.getMessage());
-                return;
-            }
-
-            // State is valid, now get product and area
+            // State is valid, display product list and crate new order
             List<Product> products = service.getAllProducts();
             Order order = view.getNewOrderInfo(customerName, state, products);
 
@@ -103,6 +106,83 @@ public class FlooringMasteryController {
                 view.displayErrorMessage("Order cancelled. Return to main menu.");
             }
         } catch (FlooringMasteryPersistenceException | FlooringMasteryDataValidationException e) {
+            view.displayErrorMessage(e.getMessage());
+        }
+    }
+
+    // Edit Order
+    private void editOrder() {
+        LocalDate date = view.getDate("Enter the order date: ");
+        int orderNumber = view.getOrderNumber();
+
+        try {
+            // Get the existing order from based on date and orderNumber
+            Order currentOrder = service.getOrder(date, orderNumber);
+
+            // Stream valid state from Taxes.txt
+            Set<String> validStates = service.getAllTaxes().stream()
+                    .map(tax -> tax.getStateAbbreviation())
+                    .map(s -> s.toUpperCase())
+                    .collect(Collectors.toSet());
+
+            // Get Product lists to display
+            List<Product> products = service.getAllProducts();
+
+            // Create an edited order
+            Order edited = view.getEditOrderInfo(currentOrder, validStates, products);
+
+            // fieldsChanged flag
+            boolean fieldsChanged = !currentOrder.getState().equals(edited.getState())
+                    || !currentOrder.getProductType().equals(edited.getProductType())
+                    || currentOrder.getArea().compareTo(edited.getArea()) != 0;
+
+            // If there are any fields changed, recalculate remaining fields
+            if (fieldsChanged){
+                edited = service.reCalculateOrder(date, edited);
+            }
+
+            view.displayOrderSummary(edited, date);
+
+            if (view.getSaveEditConfirmation()) {
+                // Yes -> edit order in file
+                service.editOrder(date, edited);
+                view.displaySuccessMessage("Order updated.");
+            } else {
+                view.displayErrorMessage("Edit cancelled. Returning to main menu.");
+            }
+
+        } catch (FlooringMasteryPersistenceException | FlooringMasteryDataValidationException e) {
+            view.displayErrorMessage(e.getMessage());
+        }
+    }
+
+    // Remove an order
+    private void removeOrder() {
+        LocalDate date = view.getDate("Enter the order date: ");
+        int orderNumber = view.getOrderNumber();
+
+        try {
+            Order order = service.getOrder(date, orderNumber);
+            view.displayOrderSummary(order, date);
+
+            if (view.getRemoveOrderConfirmation()) {
+                service.removeOrder(date, orderNumber);
+                view.displaySuccessMessage("Order #" + orderNumber + " removed.");
+            } else {
+                view.displayErrorMessage("Removal cancelled. Returning to main menu.");
+            }
+
+        } catch (FlooringMasteryPersistenceException | FlooringMasteryDataValidationException e) {
+            view.displayErrorMessage(e.getMessage());
+        }
+    }
+
+    // Export all data
+    private void exportAllData() {
+        try {
+            service.exportAllData();
+            view.displaySuccessMessage("All data exported to Backup/ExportAllData.txt");
+        } catch (FlooringMasteryPersistenceException e) {
             view.displayErrorMessage(e.getMessage());
         }
     }

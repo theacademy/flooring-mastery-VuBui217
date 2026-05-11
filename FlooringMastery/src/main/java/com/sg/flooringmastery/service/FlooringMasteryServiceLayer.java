@@ -17,6 +17,10 @@ public interface FlooringMasteryServiceLayer {
     void addOrder(LocalDate date, Order order) throws FlooringMasteryPersistenceException,
             FlooringMasteryDataValidationException;
 
+    Order reCalculateOrder(LocalDate date, Order order) throws FlooringMasteryDataValidationException, FlooringMasteryPersistenceException;
+
+    Order getOrder(LocalDate date, int orderNumber) throws FlooringMasteryDataValidationException, FlooringMasteryPersistenceException;
+
     Order editOrder(LocalDate date, Order order) throws FlooringMasteryPersistenceException;
 
     Order removeOrder(LocalDate date, int orderNumber) throws FlooringMasteryPersistenceException;

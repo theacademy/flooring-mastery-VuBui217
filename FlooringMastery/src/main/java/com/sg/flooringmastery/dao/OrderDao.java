@@ -12,6 +12,8 @@ public interface OrderDao {
 
     Order addOrder(LocalDate date, Order order) throws FlooringMasteryPersistenceException;
 
+    Order getOrder(LocalDate date, int orderNumber) throws FlooringMasteryPersistenceException;
+
     Order editOrder(LocalDate date, Order order) throws FlooringMasteryPersistenceException;
 
     Order removeOrder(LocalDate date, int orderNumber) throws FlooringMasteryPersistenceException;
