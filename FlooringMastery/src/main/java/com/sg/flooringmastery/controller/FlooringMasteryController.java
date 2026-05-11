@@ -175,6 +175,7 @@ public class FlooringMasteryController {
         } catch (FlooringMasteryPersistenceException | FlooringMasteryDataValidationException e) {
             view.displayErrorMessage(e.getMessage());
         }
+
     }
 
     // Export all data
